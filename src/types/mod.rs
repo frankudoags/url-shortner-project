@@ -12,6 +12,12 @@ pub struct StoredURL {
     pub short_url: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct NewURL {
+    pub long_url: String,
+    pub short_url: String,
+}
+
 pub const BASE_URL: &str = "http://localhost:4000";
 
 pub enum AppError {

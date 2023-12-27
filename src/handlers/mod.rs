@@ -7,8 +7,11 @@ use axum::{
 };
 use sqlx::{postgres::Postgres, PgPool, Pool};
 
-use crate::services::{check_if_id_exists, get_all_url, get_single_url, shorten_url};
 use crate::types::{AppError, StoredURL, BASE_URL};
+use crate::{
+    services::{check_if_id_exists, get_all_url, get_single_url, shorten_url},
+    types::NewURL,
+};
 
 pub async fn create_routes(db: Pool<Postgres>) -> Result<Router, Box<dyn std::error::Error>> {
     let router = Router::new()
@@ -30,10 +33,9 @@ pub async fn hello_world(
 pub async fn shorten(
     Extension(conn): Extension<PgPool>,
     Path(url): Path<String>,
-) -> Result<(StatusCode, Json<String>), AppError> {
+) -> Result<(StatusCode, Json<NewURL>), AppError> {
     let mut id = nanoid::nanoid!(6);
     let mut exists_in_db = check_if_id_exists(&conn, &id).await?;
-    println!("Generated ID: {}, exists in DB: {}", &id, exists_in_db);
 
     // Keep generating a new ID until it is unique
     while exists_in_db {
@@ -43,7 +45,13 @@ pub async fn shorten(
 
     shorten_url(&conn, &url, &id).await?;
 
-    Ok((StatusCode::OK, Json(format!("{}{}", BASE_URL, id))))
+    Ok((
+        StatusCode::OK,
+        Json(NewURL {
+            long_url: url,
+            short_url: format!("{}/{}", BASE_URL, id),
+        }),
+    ))
 }
 
 pub async fn redirect(
