@@ -1,27 +1,15 @@
+use crate::{
+    services::{check_if_id_exists, get_all_url, get_single_url, shorten_url},
+    types::{AppError, NewURL, StoredURL, BASE_URL},
+};
 use axum::{
     extract::{Extension, Path},
     http::StatusCode,
     response::Redirect,
-    routing::{get, post},
-    Json, Router,
+    Json,
 };
-use sqlx::{postgres::Postgres, PgPool, Pool};
+use sqlx::PgPool;
 
-use crate::types::{AppError, StoredURL, BASE_URL};
-use crate::{
-    services::{check_if_id_exists, get_all_url, get_single_url, shorten_url},
-    types::NewURL,
-};
-
-pub async fn create_routes(db: Pool<Postgres>) -> Result<Router, Box<dyn std::error::Error>> {
-    let router = Router::new()
-        .route("/", get(hello_world))
-        .route("/:id", get(redirect))
-        .route("/shorten/:url", post(shorten))
-        .layer(Extension(db));
-
-    Ok(router)
-}
 
 pub async fn hello_world(
     Extension(conn): Extension<PgPool>,
