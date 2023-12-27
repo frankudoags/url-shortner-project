@@ -3,37 +3,37 @@ use axum::{
     http::StatusCode,
     response::Redirect,
     routing::{get, post},
-    Router, Json,
+    Json, Router,
 };
 use sqlx::{postgres::Postgres, PgPool, Pool};
 
-use crate::types::{StoredURL, BASE_URL, AppError};
-use crate::services::{check_if_id_exists, shorten_url, get_single_url, get_all_url};
-
+use crate::services::{check_if_id_exists, get_all_url, get_single_url, shorten_url};
+use crate::types::{AppError, StoredURL, BASE_URL};
 
 pub async fn create_routes(db: Pool<Postgres>) -> Result<Router, Box<dyn std::error::Error>> {
     let router = Router::new()
         .route("/", get(hello_world))
-        .route("/shorten/:url", post(shorten))
         .route("/:id", get(redirect))
+        .route("/shorten/:url", post(shorten))
         .layer(Extension(db));
 
     Ok(router)
 }
 
 pub async fn hello_world(
-        Extension(conn): Extension<PgPool>,
-)  -> Result<Json<Vec<StoredURL>>, AppError> {
-    let data= get_all_url(&conn).await?;
+    Extension(conn): Extension<PgPool>,
+) -> Result<Json<Vec<StoredURL>>, AppError> {
+    let data = get_all_url(&conn).await?;
     Ok(Json(data))
 }
 
 pub async fn shorten(
-    Path(url): Path<String>,
     Extension(conn): Extension<PgPool>,
-) -> Result<Json<(StatusCode, String)>, AppError> {
+    Path(url): Path<String>,
+) -> Result<(StatusCode, Json<String>), AppError> {
     let mut id = nanoid::nanoid!(6);
     let mut exists_in_db = check_if_id_exists(&conn, &id).await?;
+    println!("Generated ID: {}, exists in DB: {}", &id, exists_in_db);
 
     // Keep generating a new ID until it is unique
     while exists_in_db {
@@ -43,8 +43,7 @@ pub async fn shorten(
 
     shorten_url(&conn, &url, &id).await?;
 
-    Ok(Json((StatusCode::OK, format!("{}/{}", BASE_URL, id))))
-
+    Ok((StatusCode::OK, Json(format!("{}{}", BASE_URL, id))))
 }
 
 pub async fn redirect(

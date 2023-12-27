@@ -17,7 +17,7 @@ pub const BASE_URL: &str = "http://localhost:4000";
 pub enum AppError {
     DatabaseError(sqlx::Error),
     IoError(std::io::Error),
-    UnknownError(String),
+    UnknownError,
 }
 
 impl From<sqlx::Error> for AppError {
@@ -43,9 +43,21 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("IO error: {}", err),
             ),
-            AppError::UnknownError(err) => (StatusCode::INTERNAL_SERVER_ERROR, "An error has occured".to_string()),
+            AppError::UnknownError => (StatusCode::INTERNAL_SERVER_ERROR, "An error has occured".to_string()),
         };
 
         (status_code, message).into_response()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AppResponse<T> {
+    pub message: String,
+    pub data: T
+}
+
+impl<T> AppResponse<T> {
+    pub fn new(message: String, data: T) -> Self {
+        Self { message, data }
     }
 }
